@@ -1,0 +1,38 @@
+name: Team readbook generator
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'      # Every Monday 8am — fresh start of week
+  workflow_dispatch:
+
+jobs:
+  generate-readbook:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests python-dateutil
+
+      - name: Generate readbook
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: python .github/scripts/generate_readbook.py
+
+      - name: Commit readbook
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/READBOOK.md
+          git diff --staged --quiet || git commit -m "docs: auto-update team readbook $(date +%Y-%m-%d)"
+          git push
